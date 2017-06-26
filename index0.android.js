@@ -6,6 +6,7 @@ import {
   View,
   Button,
   Alert,
+  Navigator,
   Picker,
   Image,
   Switch,
@@ -13,7 +14,6 @@ import {
   NetInfo
 } from 'react-native';
 
-import {StackNavigator} from 'react-navigation';
 
 NetInfo.fetch().done((reach) => {
   console.log('Initial: ' + reach);
@@ -27,7 +27,6 @@ export default class firstReact extends Component {
     }
 
     render(){
-      const {navigate} = this.props.navigation;
       return(
         <View style={styles.container}>
           <Text style={styles.bigText}>aswesomee</Text>
@@ -87,10 +86,6 @@ const CustomText2 = React.createClass({
 const buttonClick = () => {
   console.log("first button click")
   Alert.alert("title",'Content');
-
-  // navigate('listview',{name:'leslie',id:100});
-
-
 }
 
 const styles = StyleSheet.create({

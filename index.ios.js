@@ -9,7 +9,8 @@ import {
   AppRegistry,
   StyleSheet,
   Text,
-  View
+  View,
+  Button
 } from 'react-native';
 
 export default class firstReact extends Component {
