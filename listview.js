@@ -1,4 +1,4 @@
-'user-strict';
+'use strict';
 
 import React,{Component} from 'React';
 import {ListView,AppRegistry} from 'react-native';
