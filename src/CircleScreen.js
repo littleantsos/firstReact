@@ -3,7 +3,7 @@
 import React, {Component} from 'react';
 import {
     View, Text, ListView, Button, StyleSheet, Image, TouchableHighlight, TouchableOpacity,
-    ActivityIndicator
+    ActivityIndicator, RefreshControl
 } from 'react-native';
 import RadiusBtn from "./RadiusBtn";
 
@@ -11,21 +11,21 @@ export default class CircleScreen extends Component {
 
     constructor(props) {
         super(props);
-        // const ds = new ListView.DataSource({rowHasChanged: (r1, r2) => r1 !== r2});
         this.state = {
-            // dataSource: ds.cloneWithRows([
-            //     '娄俸银', 'youblue', '反之道', 'Speculator', '华尔街科比', '领航者之路', '空的事物', '展翅飞翔168'
-            // ])
-            isLoading:true
+            isLoading:true,
         }
     }
 
     componentDidMount(){
-        this.getMoviesFromApiAsync();
+        this._getMoviesFromApiAsync();
     }
 
     componentWillMount(){
 
+    }
+
+    onEndReached(){
+        console.log("on end reached")
     }
 
     render() {
@@ -42,11 +42,22 @@ export default class CircleScreen extends Component {
             <ListView
                 dataSource={this.state.dataSource}
                 renderRow={(rowData, selection, rowId) => this._renderRow(rowData, selection, rowId)}
+                onEndReached={this.onEndReached}
+                onEndReachedThreshold={1}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={ this.state.isLoading }
+                        onRefresh={this._getMoviesFromApiAsync.bind(this)}
+                        tintColor="gray"
+                        colors={['#ff0000', '#00ff00', '#0000ff']}
+                        progressBackgroundColor="gray"/>
+                }
             />
         );
     }
 
-    getMoviesFromApiAsync() {
+    _getMoviesFromApiAsync() {
+        this.setState({isLoading:true});
         return fetch('https://facebook.github.io/react-native/movies.json')
             .then((response) => response.json())
             .then((responseJson) => {
