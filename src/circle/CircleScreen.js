@@ -5,7 +5,9 @@ import {
     View, Text, ListView, StyleSheet, Image,
     ActivityIndicator, RefreshControl
 } from 'react-native';
-import RadiusBtn from "./RadiusBtn";
+import RadiusBtn from "../RadiusBtn";
+import Configs from "../config/Configs";
+import Utils from "../util/Utils";
 
 export default class CircleScreen extends Component {
 
@@ -18,6 +20,8 @@ export default class CircleScreen extends Component {
         this.movies = new Array;
         this.maxPage = 2;
         this.currentPage = 0;
+
+        // console.log("-- " + Configs.getActionRequestUrl());
     }
 
     componentDidMount() {
@@ -47,15 +51,17 @@ export default class CircleScreen extends Component {
             <ListView
                 dataSource={this.state.dataSource}
                 renderRow={(rowData, selection, rowId) => this._renderRow(rowData, selection, rowId)}
-                onEndReached={this._onEndReached.bind(this)}
+                onEndReached={() => this._onEndReached()}
                 onEndReachedThreshold={1}
                 refreshControl={
                     <RefreshControl
                         refreshing={ this.state.isRefresh }
-                        onRefresh={this._getMoviesFromApiAsync.bind(this)}
+                        onRefresh={() => {
+                            this._getMoviesFromApiAsync(false)
+                        }}
                         tintColor="gray"
-                        colors={['#fff']}
-                        progressBackgroundColor="#ff6200"/>
+                        colors={['#ff6200']}
+                        progressBackgroundColor="#fff"/>
                 }
                 renderFooter={this._renderFooter.bind(this)}
             />
@@ -66,7 +72,7 @@ export default class CircleScreen extends Component {
         console.log("render footer");
         // console.log("currentPage = " + this.currentPage + " maxPage = " + this.maxPage);
         let hasLoadAllPage = this._hasLoadAllPage();
-        if(!hasLoadAllPage)
+        if (!hasLoadAllPage)
             return (
                 <View style={styles.footer}>
                     <ActivityIndicator/>
@@ -74,33 +80,57 @@ export default class CircleScreen extends Component {
                 </View>
             );
         else return (
-            <View>
+            <View style={styles.footer}>
                 <Text>已经全部加在完毕</Text>
             </View>
         );
     }
 
+    //{"RequestData":{"CategoryType":0,"LastBlogID":0,"PageIndex":1,"PageSize":15},"From":3102,"RequestType":14,"UserID":"00000"}
+    //http://pre.appapi.followme.com:9918/api/Request/Action?RequestType=14
+    //DeviceID: unknown   Authorization:
     _getMoviesFromApiAsync(isLoadMore) {
-        if(this._hasLoadAllPage()) return;
+        if (this._hasLoadAllPage()) return;
         let tempCurrentPage = this.currentPage;
+        let body = '{"RequestData":{"CategoryType":0,"LastBlogID":0,"PageIndex":1,"PageSize":15},"From":3102,"RequestType":14,"UserID":"00000"}';
+
+        let headers = new Headers({
+            // 'Content-Type': 'application/json; charset=utf-8',
+            // 'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'DeviceID': '',
+            'Authorization': '',
+        });
+
+        let formData = new FormData();
+        formData.append("RequestType", "14");
         this.currentPage = isLoadMore ? ++this.currentPage : 0;
-        this.setState({isRefresh: !isLoadMore,isLoadMore:isLoadMore});
-        return fetch('https://facebook.github.io/react-native/movies.json')
+        this.setState({isRefresh: !isLoadMore, isLoadMore: isLoadMore});
+
+        let url = "http://pre.appapi.followme.com:9918/api/Request/Action?RequestType=14";
+        return fetch(url, {
+            method: 'POST',
+            header: headers,
+            body: "{'RequestData':{'CategoryType':0,'LastBlogID':0,'PageIndex':1,'PageSize':15},'From':3102,'RequestType':14,'UserID':'00000'}",
+            // body: "{\"RequestData\":{\"CategoryType\":0,\"LastBlogID\":0,\"PageIndex\":1,\"PageSize\":15},\"From\":3102,\"RequestType\":14,\"UserID\":\"00000\"}",
+            // body: JSON.stringify({'RequestData':{'CategoryType':0,'LastBlogID':0,'PageIndex':1,'PageSize':15},'From':3102,'RequestType':14,'UserID':'00000'})
+        })
             .then((response) => response.json())
             .then((responseJson) => {
-                console.info(responseJson);
-                if(isLoadMore)
-                this.movies = this.movies.concat(responseJson.movies);
-                else  this.movies = responseJson.movies;
-                console.log("电影数目 = " + this.movies.length + " " + responseJson.movies);
-                let ds = new ListView.DataSource({rowHasChanged: (r1, r2) => r1 !== r2});
-                this.setState({
-                    isRefresh: false,
-                    dataSource: ds.cloneWithRows(this.movies),
-                }, function () {
-                    // do something with new state
-                });
-                return responseJson.movies;
+                console.info("response = "+ " "+ (typeof responseJson));
+                console.info("response = "+ Utils.obj2string(responseJson));
+
+                // if (isLoadMore)
+                //     this.movies = this.movies.concat(responseJson.movies);
+                // else  this.movies = responseJson.movies;
+                // let ds = new ListView.DataSource({rowHasChanged: (r1, r2) => r1 !== r2});
+                // this.setState({
+                //     isRefresh: false,
+                //     dataSource: ds.cloneWithRows(this.movies),
+                // }, function () {
+                //     // do something with new state
+                // });
+                // return responseJson.movies;
             })
             .catch((error) => {
                 console.error(error);
@@ -108,7 +138,9 @@ export default class CircleScreen extends Component {
             });
     }
 
-    _hasLoadAllPage(){
+
+
+    _hasLoadAllPage() {
         console.log("currentPage = " + this.currentPage + " maxPage = " + this.maxPage);
         return (this.currentPage + 1) >= this.maxPage;
     }
@@ -128,7 +160,7 @@ export default class CircleScreen extends Component {
                     </View>
 
                     <View style={styles.attentionButtonContainer}>
-                        <RadiusBtn           onPress={buttonClick} btnName='关注' btnStyle={styles.attentionButton}
+                        <RadiusBtn onPress={buttonClick} btnName='关注' btnStyle={styles.attentionButton}
                                    textStyle={styles.attentionButton_text}
                                    focusTextStyle={styles.attentionButton_text_focus}
                         ></RadiusBtn>
@@ -150,12 +182,12 @@ const buttonClick = () => {
 
 const styles = StyleSheet.create({
 
-    footer:{
-        height:30,
-        backgroundColor:'#dddddd',
+    footer: {
+        height: 30,
+        backgroundColor: '#dddddd',
         flexDirection: 'row',
-        alignItems:"center",
-        justifyContent:'center',
+        alignItems: "center",
+        justifyContent: 'center',
     },
 
     blogTextContent: {
