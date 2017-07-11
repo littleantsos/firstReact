@@ -5,9 +5,10 @@ import {
     View, Text, ListView, StyleSheet, Image,
     ActivityIndicator, RefreshControl
 } from 'react-native';
-import RadiusBtn from "../RadiusBtn";
+import RadiusBtn from "../widget/RadiusBtn";
 import Configs from "../config/Configs";
 import Utils from "../util/Utils";
+import AvatarImage from "../widget/AvatarImage";
 
 export default class CircleScreen extends Component {
 
@@ -21,7 +22,7 @@ export default class CircleScreen extends Component {
         this.maxPage = 2;
         this.currentPage = 0;
 
-        // console.log("-- " + Configs.getActionRequestUrl());
+        Configs.appServer;
     }
 
     componentDidMount() {
@@ -64,13 +65,14 @@ export default class CircleScreen extends Component {
                         progressBackgroundColor="#fff"/>
                 }
                 renderFooter={this._renderFooter.bind(this)}
+                style={{backgroundColor:"#e5e6ec"}}
             />
         );
     }
 
     _renderFooter() {
         console.log("render footer");
-        // console.log("currentPage = " + this.currentPage + " maxPage = " + this.maxPage);
+        console.log("currentPage = " + this.currentPage + " maxPage = " + this.maxPage);
         let hasLoadAllPage = this._hasLoadAllPage();
         if (!hasLoadAllPage)
             return (
@@ -86,17 +88,10 @@ export default class CircleScreen extends Component {
         );
     }
 
-    //{"RequestData":{"CategoryType":0,"LastBlogID":0,"PageIndex":1,"PageSize":15},"From":3102,"RequestType":14,"UserID":"00000"}
-    //http://pre.appapi.followme.com:9918/api/Request/Action?RequestType=14
-    //DeviceID: unknown   Authorization:
     _getMoviesFromApiAsync(isLoadMore) {
         if (this._hasLoadAllPage()) return;
         let tempCurrentPage = this.currentPage;
-        let body = '{"RequestData":{"CategoryType":0,"LastBlogID":0,"PageIndex":1,"PageSize":15},"From":3102,"RequestType":14,"UserID":"00000"}';
-
         let headers = new Headers({
-            // 'Content-Type': 'application/json; charset=utf-8',
-            // 'Accept': 'application/json',
             'Content-Type': 'application/json',
             'DeviceID': '',
             'Authorization': '',
@@ -110,27 +105,39 @@ export default class CircleScreen extends Component {
         let url = "http://pre.appapi.followme.com:9918/api/Request/Action?RequestType=14";
         return fetch(url, {
             method: 'POST',
-            header: headers,
-            body: "{'RequestData':{'CategoryType':0,'LastBlogID':0,'PageIndex':1,'PageSize':15},'From':3102,'RequestType':14,'UserID':'00000'}",
+            headers: headers,
+            // body: "{'RequestData':{'CategoryType':0,'LastBlogID':0,'PageIndex':1,'PageSize':15},'From':3102,'RequestType':14,'UserID':'00000'}",
             // body: "{\"RequestData\":{\"CategoryType\":0,\"LastBlogID\":0,\"PageIndex\":1,\"PageSize\":15},\"From\":3102,\"RequestType\":14,\"UserID\":\"00000\"}",
-            // body: JSON.stringify({'RequestData':{'CategoryType':0,'LastBlogID':0,'PageIndex':1,'PageSize':15},'From':3102,'RequestType':14,'UserID':'00000'})
+            body: JSON.stringify({
+                'RequestData': {'CategoryType': 0, 'LastBlogID': 0, 'PageIndex': 1, 'PageSize': 15},
+                'From': 3102,
+                'RequestType': 14,
+                'UserID': '00000'
+            })
         })
-            .then((response) => response.json())
+            .then((response) => {
+                console.log(response);
+                return response.json();
+            })
             .then((responseJson) => {
-                console.info("response = "+ " "+ (typeof responseJson));
-                console.info("response = "+ Utils.obj2string(responseJson));
+                console.info("response = " + " " + (typeof responseJson));
+                console.info("response = " + " " + (responseJson.Data.length));
+                responseJson.Data.map((microBlog, index) => {
+                    console.log(index + " " + microBlog.MicroBlog.UserDisplayName);
+                })
+                // console.info("response = "+ Utils.obj2string(responseJson));
 
-                // if (isLoadMore)
-                //     this.movies = this.movies.concat(responseJson.movies);
-                // else  this.movies = responseJson.movies;
-                // let ds = new ListView.DataSource({rowHasChanged: (r1, r2) => r1 !== r2});
-                // this.setState({
-                //     isRefresh: false,
-                //     dataSource: ds.cloneWithRows(this.movies),
-                // }, function () {
-                //     // do something with new state
-                // });
-                // return responseJson.movies;
+                if (isLoadMore)
+                    this.movies = this.movies.concat(responseJson.Data);
+                else  this.movies = responseJson.Data;
+                let ds = new ListView.DataSource({rowHasChanged: (r1, r2) => r1 !== r2});
+                this.setState({
+                    isRefresh: false,
+                    dataSource: ds.cloneWithRows(this.movies),
+                }, function () {
+                    // do something with new state
+                });
+                return responseJson.movies;
             })
             .catch((error) => {
                 console.error(error);
@@ -139,24 +146,52 @@ export default class CircleScreen extends Component {
     }
 
 
-
     _hasLoadAllPage() {
         console.log("currentPage = " + this.currentPage + " maxPage = " + this.maxPage);
         return (this.currentPage + 1) >= this.maxPage;
     }
 
     _renderRow(rowData, selection, rowId) {
+        let microBlog = rowData.MicroBlog;
+        let isRetweet = microBlog.OriginalId > 0;
+        let isLongBlog = microBlog.longBlogId > 0;
+        let forwardIsLong = false;
+        if (isRetweet) {
+            forwardIsLong = microBlog.OriginalBlog.MicroBlog.longBlogId > 0;
+        }
+        let isHasPicture = rowData.ImgUrlList.length > 0;
+
+        let simpleBlogText = !isLongBlog && !isRetweet && !isHasPicture; //是否是纯文本微博
+        let simpleBlogTextPicture = !isLongBlog && !isRetweet && isHasPicture; //文本 图片微博
+        let simpleBlogForwardText = !forwardIsLong && isRetweet && !isHasPicture; //转发纯文本
+        let simpleBlogForwardTextPic = !isLongBlog && isRetweet && isHasPicture; //转发图片
+        let longBlog = isLongBlog && !isRetweet;  //长微博
+        let longBlogForward = forwardIsLong && isRetweet;  //转发长微博
+
+        console.log("simpleBlogText = " + simpleBlogText + " simpleBlogTextPicture =" + simpleBlogTextPicture + " simpleBlogForwardText = " + simpleBlogForwardText
+            + " simpleBlogForwardTextPic = " + simpleBlogForwardTextPic + " longBlog = " + longBlog + " longBlogForward = " + longBlogForward);
+
+        if (simpleBlogText) {
+            return this._renderSimpleTextBlog(rowData);
+        } else if (simpleBlogTextPicture) {
+            return this._renderSimplePictureBlog(rowData);
+        } else if(longBlog){
+            return this._renderLongBlog(rowData);
+        }
+    }
+
+    _renderSimpleTextBlog(rowData) {
         return (
             <View style={styles.parent}>
                 <View style={styles.titleLine}>
-                    <Image
-                        style={styles.avatar}
-                        source={{uri: 'http://www.followme.com/Avata/96019'}}></Image>
+                    <AvatarImage
+                        userId={rowData.MicroBlog.UserId}
+                    ></AvatarImage>
                     <View style={styles.avatarRight}>
                         <View>
-                            <Text style={styles.nickname}>{rowData.title}</Text>
+                            <Text style={styles.nickname}>{rowData.MicroBlog.UserDisplayName}</Text>
                         </View>
-                        <Text style={styles.blogSendTime}>{rowData.releaseYear}</Text>
+                        <Text style={styles.blogSendTime}>{rowData.MicroBlog.CreateDate}</Text>
                     </View>
 
                     <View style={styles.attentionButtonContainer}>
@@ -168,11 +203,79 @@ export default class CircleScreen extends Component {
                 </View>
 
                 <View style={styles.content}>
-                    <Text style={styles.blogTextContent}>微博的内容微博的内容微博的内容微博的内容微博的内容微博的内容微博的内容微博的内容微博的内容微博的内容微博的内容微博的内容微博的内容微博的内容微博的内容</Text>
+                    <Text style={styles.blogTextContent}>{rowData.MicroBlog.BlogBody}</Text>
+                </View>
+            </View>
+        )
+    }
+
+    _renderLongBlog(rowData) {
+        return (
+            <View style={styles.parent}>
+                <View style={styles.titleLine}>
+                    <AvatarImage
+                        userId={rowData.MicroBlog.UserId}></AvatarImage>
+                    <View style={styles.avatarRight}>
+                        <View>
+                            <Text style={styles.nickname}>{rowData.MicroBlog.UserDisplayName}</Text>
+                        </View>
+                        <Text style={styles.blogSendTime}>{rowData.MicroBlog.CreateDate}</Text>
+                    </View>
+
+                    <View style={styles.attentionButtonContainer}>
+                        <RadiusBtn onPress={buttonClick} btnName='关注' btnStyle={styles.attentionButton}
+                                   textStyle={styles.attentionButton_text}
+                                   focusTextStyle={styles.attentionButton_text_focus}
+                        ></RadiusBtn>
+                    </View>
+                </View>
+
+                <View style={styles.longBlogContent}>
+                    <Image style={styles.longBlogPicture} source={{uri:rowData.MicroBlog.LongBlogImg}}/>
+                    <View style={{flex:1,flexDirection:"column"}}>
+                        <Text style={styles.longBlogContent1}>{rowData.MicroBlog.LongBlogTitle}</Text>
+                        <Text style={styles.longBlogContent2} numberOfLines={2}>{rowData.MicroBlog.LongBlogIntro}</Text>
+                    </View>
+                </View>
+            </View>
+        );
+    }
+
+    _renderSimplePictureBlog(rowData) {
+        return (
+            <View style={styles.parent}>
+                <View style={styles.titleLine}>
+                    <AvatarImage
+                        userId={rowData.MicroBlog.UserId}></AvatarImage>
+                    <View style={styles.avatarRight}>
+                        <View>
+                            <Text style={styles.nickname}>{rowData.MicroBlog.UserDisplayName}</Text>
+                        </View>
+                        <Text style={styles.blogSendTime}>{rowData.MicroBlog.CreateDate}</Text>
+                    </View>
+
+                    <View style={styles.attentionButtonContainer}>
+                        <RadiusBtn onPress={buttonClick} btnName='关注' btnStyle={styles.attentionButton}
+                                   textStyle={styles.attentionButton_text}
+                                   focusTextStyle={styles.attentionButton_text_focus}
+                        ></RadiusBtn>
+                    </View>
+                </View>
+
+                <View style={styles.content}>
+                    <Text style={styles.blogTextContent}>{rowData.MicroBlog.BlogBody}</Text>
+                </View>
+
+                <View style={styles.pictureContent}>
+                    {rowData.ImgUrlList.map((item,i)=>this.renderPicture(item,i,rowData.ImgUrlList.length))}
                 </View>
 
             </View>
         );
+    }
+
+    renderPicture(item, i, length){
+        return <Image style={length > 1 ? styles.picture : styles.pictureOnlyOne} source={{uri:item}}/>
     }
 }
 
@@ -181,6 +284,60 @@ const buttonClick = () => {
 }
 
 const styles = StyleSheet.create({
+
+    longBlogContent1:{
+        marginLeft:5,
+        marginRight:17,
+        color:"#333",
+        fontSize:14,
+        marginTop:15,
+    },
+
+    longBlogContent2:{
+        marginLeft:5,
+        marginRight:17,
+        color:"#333",
+        fontSize:17,
+        marginTop:10,
+    },
+
+    longBlogPicture:{
+        width:118,
+        height:116,
+        alignItems:"center",
+        margin:1,
+        resizeMode:"stretch", //('cover', 'contain', 'stretch')
+    },
+
+    longBlogContent:{
+        flex:1,
+        height:118,
+        margin:10,
+        borderColor:"#ddd",
+        borderWidth:1,
+        flexDirection:"row",
+    },
+
+    pictureOnlyOne:{
+        width:200,
+        height:200,
+        marginBottom:10,
+    },
+
+    pictureContent:{
+        flex:1,
+        flexWrap:"wrap",
+        flexDirection:"row",
+        marginLeft:10,
+    },
+
+    picture: {
+        width: 100,
+        height: 100,
+        backgroundColor:"#dddddd",
+        marginRight:10,
+        marginBottom:10,
+    },
 
     footer: {
         height: 30,
@@ -205,7 +362,10 @@ const styles = StyleSheet.create({
         flex: 1,
         flexDirection: 'column',
         marginTop: 5,
-        backgroundColor: "#eee",
+        backgroundColor: "#fff",
+        borderBottomWidth:1,
+        borderTopWidth:1,
+        borderColor:"#dbdce4"
     },
 
     titleLine: {
