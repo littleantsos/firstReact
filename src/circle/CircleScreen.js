@@ -30,7 +30,6 @@ export default class CircleScreen extends Component {
     }
 
     componentWillMount() {
-
     }
 
     _onEndReached() {
@@ -303,9 +302,9 @@ const styles = StyleSheet.create({
 
     longBlogPicture:{
         width:118,
-        height:116,
+        height:115,
         alignItems:"center",
-        margin:1,
+        margin:0.5,
         resizeMode:"stretch", //('cover', 'contain', 'stretch')
     },
 

@@ -8,7 +8,7 @@ import {StackNavigator, TabNavigator} from 'react-navigation';
 
 import TabBarItem from './TabBarItem'
 import CircleScreen from "./circle/CircleScreen"
-import TradeScreen from "./TradeScreen"
+import TradeScreen from "./trade/TradeScreen"
 import FollowScreen from "./FollowScreen"
 import LiveScreen from "./LiveScreen"
 import MineScreen from "./MineScreen"
